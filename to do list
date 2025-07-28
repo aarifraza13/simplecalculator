@@ -1,0 +1,89 @@
+import tkinter as tk
+from tkinter import messagebox
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from scipy import stats
+
+# Initialize the main window
+root = tk.Tk()
+root.title("To-Do List App")
+
+# Task storage using pandas DataFrame
+task_data = pd.DataFrame(columns=["Task", "Status"])
+
+# Functions
+
+def add_task():
+    task = entry.get()
+    if task.strip() == "":
+        messagebox.showwarning("Input Error", "Please enter a task.")
+        return
+    global task_data
+    task_data = task_data.append({"Task": task, "Status": "Pending"}, ignore_index=True)
+    update_listbox()
+    entry.delete(0, tk.END)
+
+def delete_task():
+    selected = listbox.curselection()
+    if not selected:
+        messagebox.showwarning("Selection Error", "Please select a task to delete.")
+        return
+    global task_data
+    index = selected[0]
+    task_data = task_data.drop(task_data.index[index]).reset_index(drop=True)
+    update_listbox()
+
+def mark_done():
+    selected = listbox.curselection()
+    if not selected:
+        messagebox.showwarning("Selection Error", "Please select a task to mark as done.")
+        return
+    index = selected[0]
+    task_data.at[index, "Status"] = "Done"
+    update_listbox()
+
+def update_listbox():
+    listbox.delete(0, tk.END)
+    for i, row in task_data.iterrows():
+        listbox.insert(tk.END, f"{row['Task']} - {row['Status']}")
+
+def show_summary():
+    if task_data.empty:
+        messagebox.showinfo("Summary", "No tasks yet.")
+        return
+
+    # Use numpy to calculate percentage completed
+    total = len(task_data)
+    done_count = np.sum(task_data['Status'] == 'Done')
+    percent_done = (done_count / total) * 100
+
+    # Use scipy to find the mode status
+    mode_status = stats.mode(task_data['Status'])[0][0]
+
+    messagebox.showinfo("Summary", f"Tasks: {total}\nCompleted: {done_count}\n"
+                                   f"Completion Rate: {percent_done:.2f}%\nMost Common Status: {mode_status}")
+
+def encode_status():
+    if task_data.empty:
+        messagebox.showinfo("Encode", "No data to encode.")
+        return
+    encoder = LabelEncoder()
+    encoded = encoder.fit_transform(task_data["Status"])
+    messagebox.showinfo("Encoded Status", f"Encoded Status: {list(encoded)}")
+
+# GUI Layout
+entry = tk.Entry(root, width=40, font=("Arial", 12))
+entry.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
+
+tk.Button(root, text="Add Task", width=15, command=add_task).grid(row=1, column=0)
+tk.Button(root, text="Delete Task", width=15, command=delete_task).grid(row=1, column=1)
+tk.Button(root, text="Mark as Done", width=15, command=mark_done).grid(row=1, column=2)
+tk.Button(root, text="Show Summary", width=15, command=show_summary).grid(row=1, column=3)
+tk.Button(root, text="Encode Status", width=64, command=encode_status).grid(row=2, column=0, columnspan=4, pady=5)
+
+listbox = tk.Listbox(root, width=70, height=10, font=("Arial", 12))
+listbox.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
+
+# Start the app
+root.mainloop()
